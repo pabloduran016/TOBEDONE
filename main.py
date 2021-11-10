@@ -1,5 +1,5 @@
 import os.path
-import time
+# import time
 import traceback
 from dataclasses import dataclass
 import sys
@@ -66,14 +66,14 @@ def update_todist_from_file(acc: TodistAccount, file_path: str, project_name: st
         else:
             if api is None:
                 TypeError('missing paramater api for set_api = False')
-        n1 = time.time()
+        # n1 = time.time()
         project_id = next(filter(lambda x: x['name'] == project_name, api.projects.all()))['id']
         with open(file_path, 'r') as f:
             tasks = [raw_line.replace('-', '').strip() for raw_line in f.readlines()]
-        n2 = time.time()
+        # n2 = time.time()
         _add_tasks(api, project_id, tasks)
-        n3 = time.time()
-        print(f'Took {n2 - n1} seconds to get project id and tasks and {n3 - n2} seconds to add the tasks')
+        # n3 = time.time()
+        # print(f'Took {n2 - n1} seconds to get project id and tasks and {n3 - n2} seconds to add the tasks')
         return True
     except Exception:
         traceback.print_exc()
