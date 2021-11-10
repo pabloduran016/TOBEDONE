@@ -17,7 +17,7 @@ You can get your API token in the Todoist app in Settings -> Integrations.
 
 ## Usage:
 ### FLAG
-`--config` Use file named `config.tobedone.json` to carry out execution` 
+`--config Optinal[<file_path>]` Use file named `config.tobedone.json` or the optional `file_path` if provided to carry out execution` 
 ### Commands:
 `push <file_path>` Update todoist account from `file`.  If no file is provided the default is 'TODO.txt'  
 `pull <file_path>` Update `file` from todoist account.  If no file is provided the default is 'TODO.txt'  

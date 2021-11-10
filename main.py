@@ -162,12 +162,21 @@ if __name__ == '__main__':
     op: Optional[OpType] = None
     custom: bool = False
     config_path = 'config.tobedone.json'
-    if '--config' in args:
-        if os.path.exists(config_path):
-            print(f'[INFO] Loading config from file: `{config_path}`')
-            account, path, op, project_name = load_config_from_json(config_path)
-        else:
-            account, path, op, project_name = load_config_from_args(args)
+    config = False
+    while len(args) > 0:
+        arg = args.pop()
+        if arg == '--config':
+            if len(args) > 0:
+                config_path = args.pop()
+            if os.path.exists(config_path):
+                config = True
+            else:
+                print(f'[ERROR] Coulnd\'t find filepath `{config_path}`')
+                print(USAGE)
+                exit(1)
+    if config:
+        print(f'[INFO] Loading config from file: `{config_path}`')
+        account, path, op, project_name = load_config_from_json(config_path)
     else:
         account, path, op, project_name = load_config_from_args(args)
     succeeded: bool = False
