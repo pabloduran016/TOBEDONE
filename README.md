@@ -9,3 +9,5 @@ Todoist sync aplication with python. Application to update data from todist and 
 ### Subcommands:
     `-c <file_path>`: Choose todist account from cutstom .json `file`
 
+## References:
+- [Todist API Docs](https://developer.todoist.com/sync/v8/#get-all-projects)
