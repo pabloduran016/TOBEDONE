@@ -17,10 +17,20 @@ You can get your API token in the Todoist app in Settings -> Integrations.
 
 ## Usage:
 ### FLAG
-`--config Optinal[<file_path>]` Use file named `config.tobedone.json` or the optional `file_path` if provided to carry out execution` 
+`--config Optinal[<file_path>]` Use file named `config.tobedone.json` or the optional `file_path` if provided to carry out execution. Example:
+````json
+{
+  "account": "account.tobedone.json",
+  "project": "Project",
+  "action": "sync",
+  "file_path": "TODO.txt"
+}
+````
+
 ### Commands:
 `push <file_path>` Update todoist account from `file`.  If no file is provided the default is 'TODO.txt'  
 `pull <file_path>` Update `file` from todoist account.  If no file is provided the default is 'TODO.txt'  
+`sync <file_path>` Sync `file` from todoist account.  If no file is provided the default is 'TODO.txt'  
 
 ### Subcommands:
 `-c <file_path>` Choose todist account from cutstom .json `file` with the format determined before  

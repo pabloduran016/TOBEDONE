@@ -189,6 +189,7 @@ USAGE = """USAGE:
   COMMAND:
     push <file_path>: Update todoist account from `file`. If no file is provided the default is 'TODO.txt'
     pull <file_path>: Update `file` from todoist account. If no file is provided the default is 'TODO.txt'
+    sync  <file_path>: Sync `file` with todoist account. If no file is provided the default is 'TODO.txt'
   
   SUBCOMMAND:
     -c <file_path>: Choose todist account from cutstom .json `file`
