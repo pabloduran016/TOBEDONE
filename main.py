@@ -48,11 +48,20 @@ def update_todist_from_file(account: TodistAccount, path: str, project_name: str
         return True
     except Exception:
         traceback.print_exc()
-        return False
+    return False
 
 
 def update_file_from_todoist(account: TodistAccount, path: str, project_name: str) -> bool:
-    raise NotImplementedError
+    try:
+        api = _set_api(account)
+        project_id = next(filter(lambda x: x['name'] == project_name, api.projects.all()))['id']
+        tasks = [e['content'] for e in api.projects.get_data(project_id)['items']]
+        with open(path, 'a') as f:
+            f.writelines([f'- {t}\n' for t in tasks])
+        return True
+    except Exception:
+        traceback.print_exc()
+    return False
 
 
 class OpType(Enum):
