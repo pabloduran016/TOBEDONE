@@ -6,19 +6,21 @@ First, install all the libraries:
 ```bash
 pip install -r requirements.txt
 ``` 
-Then, create an account.json file with a key being "token":  
+Then, create an account.pydone.json file with a key being "token":  
 ```json 
 {"token": "Your API token"}
 ```
-By default, the app while look for a file named `account.json` in the current directory. You can 
+By default, the app while look for a file named `account.pydone.json` in the current directory. You can 
 specify a custom file using the `-c` flag.  
 You can get your API token in the Todoist app in Settings -> Integrations.
 
 
 ## Usage:
+### FLAG
+`--config` Use file named `config.pydone.json` to carry out execution` 
 ### Commands:
-`push <file_path>` Update todoist account from `file`  
-`pull <file_path>` Update `file` from todoist account  
+`push <file_path>` Update todoist account from `file`.  If no file is provided the default is 'TODO.txt'  
+`pull <file_path>` Update `file` from todoist account.  If no file is provided the default is 'TODO.txt'  
 
 ### Subcommands:
 `-c <file_path>` Choose todist account from cutstom .json `file` with the format determined before  
