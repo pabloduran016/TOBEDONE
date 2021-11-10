@@ -1,4 +1,5 @@
 import os.path
+import time
 import traceback
 from dataclasses import dataclass
 import sys
@@ -21,16 +22,19 @@ def _set_api(acc: TodistAccount) -> todoist.TodoistAPI:
     return api
 
 
-def _add_task(api: todoist.TodoistAPI, project_id: int, task: str):
+def _add_task(api: todoist.TodoistAPI, project_id: int, task: str, commit: bool = True):
     api.items.add(task, project_id=project_id)
-    api.commit()
+    if commit:
+        api.commit()
 
 
-def _add_tasks(api: todoist.TodoistAPI, project_id: int, tasks: List[str]):
+def _add_tasks(api: todoist.TodoistAPI, project_id: int, tasks: List[str], commit: bool = True):
     current_tasks = [e['content'] for e in api.projects.get_data(project_id)['items']]
     for t in tasks:
         if t not in current_tasks:
-            _add_task(api, project_id, t)
+            _add_task(api, project_id, t, commit=False)
+    if commit:
+        api.commit()
 
 
 def load_account_from_json(file_path: str) -> TodistAccount:
@@ -43,22 +47,47 @@ def load_account_from_json(file_path: str) -> TodistAccount:
         return TodistAccount(data['token'])
 
 
-def update_todist_from_file(acc: TodistAccount, file_path: str, project_name: str) -> bool:
+def sync_file_with_todoist(acc: TodistAccount, file_path: str, project_name: str) -> bool:
     try:
         api = _set_api(acc)
+        a = update_todist_from_file(acc, file_path, project_name, set_api=False, api=api)
+        b = update_file_from_todoist(acc, file_path, project_name, set_api=False, api=api)
+        return a and b
+    except Exception:
+        traceback.print_exc()
+        return False
+
+
+def update_todist_from_file(acc: TodistAccount, file_path: str, project_name: str, set_api: bool = True,
+                            api: Optional[todoist.TodoistAPI] = None) -> bool:
+    try:
+        if set_api:
+            api = _set_api(acc)
+        else:
+            if api is None:
+                TypeError('missing paramater api for set_api = False')
+        n1 = time.time()
         project_id = next(filter(lambda x: x['name'] == project_name, api.projects.all()))['id']
         with open(file_path, 'r') as f:
             tasks = [raw_line.replace('-', '').strip() for raw_line in f.readlines()]
+        n2 = time.time()
         _add_tasks(api, project_id, tasks)
+        n3 = time.time()
+        print(f'Took {n2 - n1} seconds to get project id and tasks and {n3 - n2} seconds to add the tasks')
         return True
     except Exception:
         traceback.print_exc()
     return False
 
 
-def update_file_from_todoist(acc: TodistAccount, file_path: str, project_name: str) -> bool:
+def update_file_from_todoist(acc: TodistAccount, file_path: str, project_name: str, set_api: bool = True,
+                             api: Optional[todoist.TodoistAPI] = None) -> bool:
     try:
-        api = _set_api(acc)
+        if set_api:
+            api = _set_api(acc)
+        else:
+            if api is None:
+                TypeError('missing paramater api for set_api = False')
         project_id = next(filter(lambda x: x['name'] == project_name, api.projects.all()))['id']
         tasks = [e['content'] for e in api.projects.get_data(project_id)['items']]
         with open(file_path, 'r') as f:
@@ -74,9 +103,10 @@ def update_file_from_todoist(acc: TodistAccount, file_path: str, project_name: s
 class OpType(Enum):
     PUSH = auto()
     PULL = auto()
+    SYNC = auto()
 
 
-OP_NAMES = {'push': OpType.PUSH, 'pull': OpType.PULL}
+OP_NAMES = {'push': OpType.PUSH, 'pull': OpType.PULL, 'sync': OpType.SYNC}
 
 
 def load_config_from_json(file_path: str) -> Tuple[TodistAccount, str, OpType, str]:
@@ -119,6 +149,16 @@ def load_config_from_args(args: List[str]) -> Tuple[TodistAccount, str, OpType, 
                 print('Invalid usage for pull command')
                 print(USAGE)
                 exit(1)
+        elif arg == 'sync':
+            if len(args) == 0:
+                action = OpType.SYNC
+            elif len(args) > 0:
+                action = OpType.SYNC
+                file_path = args.pop()
+            else:
+                print('Invalid usage for sync command')
+                print(USAGE)
+                exit(1)
         elif arg == '-c':
             if len(args) > 0:
                 account_path = args.pop()
@@ -139,6 +179,7 @@ def load_config_from_args(args: List[str]) -> Tuple[TodistAccount, str, OpType, 
     else:
         print(f'[INFO] Loading account from file: `{account_path}`')
         acc = load_account_from_json(account_path)
+    assert action is not None
     return acc, file_path, action, project_name
 
 
@@ -182,6 +223,9 @@ if __name__ == '__main__':
     elif op == OpType.PULL:
         print(f'[INFO] Pulling to file `{path}` from todoist. Project: {p_name}')
         succeeded = update_file_from_todoist(account, path, p_name)
+    elif op == OpType.SYNC:
+        print(f'[INFO] Syncing file `{path}` from todoist project `{p_name}`')
+        succeeded = sync_file_with_todoist(account, path, p_name)
     else:
         raise ValueError(f'Unknown operation {op}. This may be a bug in the parsing of the arguments')
     if succeeded:
