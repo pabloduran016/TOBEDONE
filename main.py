@@ -90,7 +90,7 @@ def load_config_from_args(args: List[str]) -> Tuple[TodistAccount, str, OpType, 
         print(USAGE)
         exit(1)
     path: str = FILE_PATH
-    account_path: str = 'accounts.pydone.json'
+    account_path: str = 'accounts.tobedone.json'
     project_name: str = 'Inbox'
     op: Optional[OpType] = None
     while len(args) > 0:
@@ -148,7 +148,7 @@ def load_config_from_args(args: List[str]) -> Tuple[TodistAccount, str, OpType, 
 
 USAGE = """USAGE:
   FLAG:
-    --config: Use file named config.pydone.json to carry out execution
+    --config: Use file named config.tobedone.json to carry out execution
   COMMAND:
     push <file_path>: Update todoist account from `file`. If no file is provided the default is 'TODO.txt'
     pull <file_path>: Update `file` from todoist account. If no file is provided the default is 'TODO.txt'
@@ -161,7 +161,7 @@ if __name__ == '__main__':
     args = list(reversed(sys.argv[1:].copy()))
     op: Optional[OpType] = None
     custom: bool = False
-    config_path = 'config.pydone.json'
+    config_path = 'config.tobedone.json'
     if '--config' in args:
         if os.path.exists(config_path):
             print(f'[INFO] Loading config from file: `{config_path}`')
