@@ -2,11 +2,13 @@
 Todoist sync aplication with python. Application to update data from todist and upload datat to todist using a txt
 
 ## Getting started:
-First, install all the libraries:  
+First, clone the repo or donwload it in which everway you prefer. In reality, the only files you need is the 
+[main.py](main.py) and the [requirements.txt](requirements.txt)  
+After that, install all the libraries using pip:  
 ```bash
 pip install -r requirements.txt
 ``` 
-Then, create an `account.tobedone.json` file with a key being "token":  
+Then, create an `account.tobedone.json` file with a key being "account_token":  
 ```json 
 {"account_token": "Your API token"}
 ```
@@ -20,10 +22,50 @@ You can also use a `config.tobedone.json` file
 }
 ````
 By default, the app while look for a file named `account.tobedone.json` in the current directory. You can 
-specify a custom file using the `-acc` flag.  
-For the `config.tobedone.json` file ot be used, you have to add the `--config` flag
+Specify a custom file using the `-acc` flag.  
+For the `config.tobedone.json` file to be used, you have to add the `--config` flag which looks for 
+`config.tobedone.json` in the current directory. You can add an argument to specify a path.  
 You can get your API token in the Todoist app in Settings -> Integrations.
+When ever you want to perform an action, just give  ommand to the [main.py](main.py) program.  
 
+## Setting up an executable
+If you prefer to run the app directly with an executable  
+### Windows
+First, create a `name_for_file.cmd` and write the following:  
+```bash
+PATH_TO_PYTHON_EXE PATH_TO_MAIN_PY --config PATH_TO_CONFIG_FILE
+```  
+In my experience, is better to use absolute paths to avoid any kinds of mistakes.  
+Alternatively to using a config file you can specify the arguments in the file.  
+Tu run it just type:  
+```bash
+PATH_TO_FILE.cmd
+```  
+You can even set it as a programmed task using windows tasks programmer or even make a desktop shortcut.  
+
+## Linux
+To make an executable in linux you have to create a .sh file and write.  
+```bash
+PATH_TO_PYTHON_EXE PATH_TO_MAIN_PY --config PATH_TO_CONFIG_FILE
+```
+In my experience, is better to use absolute paths to avoid any kinds of mistakes.  
+Alternatively to using a config file you can specify the arguments in the file. 
+Then, you will have to make it an executable by running:  
+```bash
+chmod +x filename.sh
+```
+Whenever you need to run it just type in the terminal: 
+```bash
+/PATH_TO_FILE.sh
+```
+Then you can create shortcuts or whatever.  
+If you are an experienced Linux user, you have probaly heard about crontab. With it, you can schedule
+this program to run on the back and update your todos. 
+To schedule it to run every 30 minutes you have to type `crontab -e`, which will open the editor
+and add the line 
+```bash
+*/30 * * * * /PATH_TO_FILE.sh
+```
 
 ## Usage:
 ```bash
