@@ -39,7 +39,7 @@ def _add_tasks(api: todoist.TodoistAPI, project_id: int, tasks: List[str], commi
 
 def load_account_from_json(file_path: str) -> TodistAccount:
     if not os.path.exists(file_path):
-        print(f'[ERROR] Coulnn\'t find path `{path}`')
+        print(f'[ERROR] Counn\'t find path `{file_path}`')
     with open(file_path, 'r') as f:
         data = json.load(f)
         if 'token' not in data:
