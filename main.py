@@ -23,6 +23,8 @@ def _set_api(acc: TodistAccount) -> todoist.TodoistAPI:
 
 
 def _add_task(api: todoist.TodoistAPI, project_id: int, task: str, commit: bool = True):
+    if task.strip() == '':
+        return
     api.items.add(task, project_id=project_id)
     if commit:
         api.commit()
@@ -39,12 +41,13 @@ def _add_tasks(api: todoist.TodoistAPI, project_id: int, tasks: List[str], commi
 
 def load_account_from_json(file_path: str) -> TodistAccount:
     if not os.path.exists(file_path):
-        print(f'[ERROR] Counn\'t find path `{file_path}`')
+        print(f'[ERROR] Couldn\'t find account path `{file_path}`. Try setting it with the `-acc` arg or use `--config`')
+        exit(1)
     with open(file_path, 'r') as f:
         data = json.load(f)
         if 'token' not in data:
             ValueError('Invalid json file. Expected key `token`')
-        return TodistAccount(data['token'])
+        return TodistAccount(data['account_token'])
 
 
 def sync_file_with_todoist(acc: TodistAccount, file_path: str, project_name: str) -> bool:
@@ -107,16 +110,17 @@ class OpType(Enum):
 
 
 OP_NAMES = {'push': OpType.PUSH, 'pull': OpType.PULL, 'sync': OpType.SYNC}
+OP_HUMAN_NAMES = {OpType.PUSH: 'push', OpType.PULL: 'pull', OpType.SYNC: 'sync'}
 
 
 def load_config_from_json(file_path: str) -> Tuple[TodistAccount, str, OpType, str]:
     with open(file_path, 'r') as f:
         data = json.load(f)
-        for k in ('account', 'project', 'action', 'file_path'):
+        for k in ('account_token', 'project', 'action', 'file_path'):
             if k not in data:
                 print(f'[ERROR] Missing key `{k}` in config file `{file_path}`')
                 exit(1)
-        return load_account_from_json(data['account']), data['file_path'], OP_NAMES[data['action']], data['project']
+        return TodistAccount(data['account_token']), data['file_path'], OP_NAMES[data['action']], data['project']
 
 
 def load_config_from_args(args: List[str]) -> Tuple[TodistAccount, str, OpType, str]:
@@ -133,8 +137,9 @@ def load_config_from_args(args: List[str]) -> Tuple[TodistAccount, str, OpType, 
             if len(args) == 0:
                 action = OpType.PUSH
             elif len(args) > 0:
+                if not args[-1].startswith('-'):
+                    file_path = args.pop()
                 action = OpType.PUSH
-                file_path = args.pop()
             else:
                 print('Invalid usage for push command')
                 print(USAGE)
@@ -143,8 +148,9 @@ def load_config_from_args(args: List[str]) -> Tuple[TodistAccount, str, OpType, 
             if len(args) == 0:
                 action = OpType.PULL
             elif len(args) > 0:
+                if not args[-1].startswith('-'):
+                    file_path = args.pop()
                 action = OpType.PULL
-                file_path = args.pop()
             else:
                 print('Invalid usage for pull command')
                 print(USAGE)
@@ -153,21 +159,22 @@ def load_config_from_args(args: List[str]) -> Tuple[TodistAccount, str, OpType, 
             if len(args) == 0:
                 action = OpType.SYNC
             elif len(args) > 0:
+                if not args[-1].startswith('-'):
+                    file_path = args.pop()
                 action = OpType.SYNC
-                file_path = args.pop()
             else:
                 print('Invalid usage for sync command')
                 print(USAGE)
                 exit(1)
-        elif arg == '-c':
-            if len(args) > 0:
+        elif arg == '-acc':
+            if len(args) > 0 and not args[-1].startswith('-'):
                 account_path = args.pop()
             else:
-                print('Invalid usage for `-c` subcommand')
+                print('Invalid usage for `-acc` subcommand')
                 print(USAGE)
                 exit(1)
         elif arg == '-p':
-            if len(args) > 0:
+            if len(args) > 0 and not args[-1].startswith('-'):
                 project_name = args.pop()
             else:
                 print('Invalid usage for `-p` subcommand')
@@ -176,24 +183,22 @@ def load_config_from_args(args: List[str]) -> Tuple[TodistAccount, str, OpType, 
         else:
             print(f'Unknwon command {arg}')
             exit(1)
-    else:
-        print(f'[INFO] Loading account from file: `{account_path}`')
-        acc = load_account_from_json(account_path)
+    # print(f'[INFO] Loading account from file: `{account_path}`')
+    acc = load_account_from_json(account_path)
     assert action is not None
     return acc, file_path, action, project_name
 
 
-USAGE = """USAGE:
-  FLAG:
-    --config: Use file named config.tobedone.json to carry out execution
+USAGE = """USAGE: python main.py [OPTINAL FLAGS] <COMMAND> [ARGS] 
+  OPTIONAL FLAGS:
+    --config <file>: Use file named config.tobedone.json or `file` if provided to carry out execution
   COMMAND:
-    push <file_path>: Update todoist account from `file`. If no file is provided the default is 'TODO.txt'
-    pull <file_path>: Update `file` from todoist account. If no file is provided the default is 'TODO.txt'
-    sync  <file_path>: Sync `file` with todoist account. If no file is provided the default is 'TODO.txt'
-  
+    push <file>: Update todoist account from `file`. If no file is provided the default is 'TODO.txt'
+    pull <file>: Update `file` from todoist account. If no file is provided the default is 'TODO.txt'
+    sync  <file>: Sync `file` with todoist account. If no file is provided the default is 'TODO.txt'
   SUBCOMMAND:
-    -c <file_path>: Choose todist account from cutstom .json `file`
-    -p <project_name>: Choose todist project to work from"""
+    -acc <file>: Choose todist account from cutstom .json `file`. Default is account.tobedone.json
+    -p <project_name>: Choose todist project to work from. Defualt is `Inbox`"""
 
 if __name__ == '__main__':
     arguments = list(reversed(sys.argv[1:].copy()))
@@ -201,15 +206,16 @@ if __name__ == '__main__':
     custom: bool = False
     config_path = 'config.tobedone.json'
     config = False
-    while len(arguments) > 0:
-        argument = arguments.pop()
+    args_copy = arguments.copy()
+    while len(args_copy) > 0:
+        argument = args_copy.pop()
         if argument == '--config':
-            if len(arguments) > 0:
-                config_path = arguments.pop()
+            if len(args_copy) > 0:
+                config_path = args_copy.pop()
             if os.path.exists(config_path):
                 config = True
             else:
-                print(f'[ERROR] Coulnd\'t find filepath `{config_path}`')
+                print(f'[ERROR] Couldn\'t find filepath `{config_path}` for config')
                 print(USAGE)
                 exit(1)
     if config:
@@ -217,15 +223,13 @@ if __name__ == '__main__':
         account, path, op, p_name = load_config_from_json(config_path)
     else:
         account, path, op, p_name = load_config_from_args(arguments)
+    print(f'[INFO] Running op `{OP_HUMAN_NAMES[op]}` on project `{p_name}` with file `{path}`')
     succeeded: bool = False
     if op == OpType.PUSH:
-        print(f'[INFO] Pushing file `{path}` to todoist. Project: {p_name}')
         succeeded = update_todist_from_file(account, path, p_name)
     elif op == OpType.PULL:
-        print(f'[INFO] Pulling to file `{path}` from todoist. Project: {p_name}')
         succeeded = update_file_from_todoist(account, path, p_name)
     elif op == OpType.SYNC:
-        print(f'[INFO] Syncing file `{path}` from todoist project `{p_name}`')
         succeeded = sync_file_with_todoist(account, path, p_name)
     else:
         raise ValueError(f'Unknown operation {op}. This may be a bug in the parsing of the arguments')
