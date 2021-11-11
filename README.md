@@ -6,11 +6,11 @@ First, install all the libraries:
 ```bash
 pip install -r requirements.txt
 ``` 
-Then, create an account.tobedone.json file with a key being "token":  
+Then, create an `account.tobedone.json` file with a key being "token":  
 ```json 
 {"account_token": "Your API token"}
 ```
-You can also use a config.tobedone.json file  
+You can also use a `config.tobedone.json` file  
 ````json
 {
   "account_token": "Your api token",
@@ -20,7 +20,8 @@ You can also use a config.tobedone.json file
 }
 ````
 By default, the app while look for a file named `account.tobedone.json` in the current directory. You can 
-specify a custom file using the `-c` flag.  
+specify a custom file using the `-acc` flag.  
+For the `config.tobedone.json` file ot be used, you have to add the `--config` flag
 You can get your API token in the Todoist app in Settings -> Integrations.
 
 
