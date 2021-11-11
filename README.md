@@ -1,6 +1,12 @@
 # TOBEDONE
 Todoist sync aplication with python. Application to update data from todist and upload datat to todist using a txt
 
+You can create a .txt file and sync it with the TOdoist app. Any changes you make on the app will affect the .txt 
+the oder way around. Currently, the actions supporte are:  
+- [x] Push: Change the Todist app according to the text file
+- [x] Pull: Fetch the current changes from Todoist
+- [x] Sync: Make all the tasks from either places appear in both
+
 ## Getting started:
 First, clone the repo or download it however you prefer. In reality, the only files you need are 
 [main.py](main.py) and [requirements.txt](requirements.txt)  
