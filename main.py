@@ -71,8 +71,11 @@ def update_todist_from_file(acc: TodistAccount, file_path: str, project_name: st
                 TypeError('missing paramater api for set_api = False')
         # n1 = time.time()
         project_id = next(filter(lambda x: x['name'] == project_name, api.projects.all()))['id']
-        with open(file_path, 'r') as f:
-            tasks = [raw_line.replace('-', '').strip() for raw_line in f.readlines()]
+        if os.path.exists(file_path):
+            with open(file_path, 'r') as f:
+                tasks = [raw_line.replace('-', '').strip() for raw_line in f.readlines()]
+        else:
+            tasks = []
         # n2 = time.time()
         _add_tasks(api, project_id, tasks)
         # n3 = time.time()
@@ -93,8 +96,11 @@ def update_file_from_todoist(acc: TodistAccount, file_path: str, project_name: s
                 TypeError('missing paramater api for set_api = False')
         project_id = next(filter(lambda x: x['name'] == project_name, api.projects.all()))['id']
         tasks = [e['content'] for e in api.projects.get_data(project_id)['items']]
-        with open(file_path, 'r') as f:
-            current_tasks = [raw_line.replace('-', '').strip() for raw_line in f.readlines()]
+        if os.path.exists(file_path):
+            with open(file_path, 'r') as f:
+                current_tasks = [raw_line.replace('-', '').strip() for raw_line in f.readlines()]
+        else:
+            current_tasks = []
         with open(file_path, 'a') as f:
             f.writelines([f'- {t}\n' for t in tasks if t not in current_tasks])
         return True
