@@ -57,8 +57,15 @@ PATH_TO_PYTHON_EXE PATH_TO_MAIN_PY --config PATH_TO_CONFIG_FILE
 ```  
 In my experience, is better to use absolute paths to avoid any kinds of mistakes.  
 Alternatively to using a config file you can just specify the arguments.  
+
+This will create a command window. If you prefer to not show it you can write instead a .vbs file
+```vbs
+Set oShell = CreateObject("Wscript.Shell")
+oShell.Run "PATH_TO_PYTHON_EXE PATH_TO_MAIN_PY --config PATH_TO_CONFIG_FILE", 0, false
+```
+
 Tu run it just type:  
-```bash
+```console
 PATH_TO_FILE.cmd
 ```  
 You can even set it as a programmed task using windows tasks programmer or even make a desktop shortcut.  
@@ -71,11 +78,11 @@ PATH_TO_PYTHON_EXE PATH_TO_MAIN_PY --config PATH_TO_CONFIG_FILE
 In my experience, is better to use absolute paths to avoid any kinds of mistakes.  
 Alternatively to using a config file you can just specify the arguments. 
 Then, you will have to make it an executable by running:  
-```bash
+```console
 chmod +x filename.sh
 ```
 Whenever you need to run it just type in the terminal: 
-```bash
+```console
 /PATH_TO_FILE.sh
 ```
 Then you can create shortcuts or whatever.  

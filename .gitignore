@@ -2,3 +2,5 @@ TODO.txt
 .idea/
 *.json
 *.cmd
+*.bat
+*.vbs
