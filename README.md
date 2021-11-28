@@ -3,15 +3,15 @@ Todoist sync aplication with python. Application to update data from todist and 
 
 You can create a .txt file and sync it with the TOdoist app. Any changes you make on the app will affect the .txt 
 the oder way around. Currently, the actions supporte are:  
-- [x] Push: Change the Todist app according to the text file
-- [x] Pull: Fetch the current changes from Todoist 
-- [x] Sync: Make all the tasks from either places appear in both and eliminate [crossed out tasks](#completed-tasks)
+* Push: Change the Todist app according to the text file
+* Pull: Fetch the current changes from Todoist 
+* Sync: Make all the tasks from either places appear in both and eliminate [crossed out tasks](#completed-tasks)  
 
-##Tasks  
+## Tasks
 Taks are defined in the text file starting with `-`. Example: `- Add enemies to my game`. TOBEDONE doesn't take into 
 account the amount of spaces surrounding `-` so that example will be the same as saying: `   -  Add enemies to my game`.  
 
-###Completed tasks
+### Completed tasks
 Completed tasks are defined in the text file starting with `x`. Example: `x Add enemies to my game`. The same rule as 
 before is applied to the completed tasks.  
 
