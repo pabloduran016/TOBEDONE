@@ -3,12 +3,24 @@ import os.path
 import traceback
 from dataclasses import dataclass
 import sys
-from typing import Optional, List, Tuple
+from typing import Optional, List, Tuple, Dict
 from enum import auto, Enum
 import todoist
 import json
+import datetime
+
 
 FILE_PATH = 'TODO.txt'
+Task = Dict[str, str]
+DAT_FMT = '%Y-%m-%d:%H:%M:%S'
+
+
+def _tasks_from_strs(api: todoist.TodoistAPI, project_id: int, tstrs: List[str]) -> Dict[str, Task]:
+    tasks = {k: None for k in tstrs}
+    for t in api.projects.get_data(project_id)['items']:
+        if t['content'] in tasks:
+            tasks[t['content']] = t
+    return tasks
 
 
 @dataclass
@@ -30,11 +42,27 @@ def _add_task(api: todoist.TodoistAPI, project_id: int, task: str, commit: bool 
         api.commit()
 
 
+def _complete_task(api: todoist.TodoistAPI, task: Task, commit: bool = True):
+    api.items.complete(task['id'], datetime.datetime.today().strftime('%Y-%m-%d'))
+    if commit:
+        api.commit()
+
+
 def _add_tasks(api: todoist.TodoistAPI, project_id: int, tasks: List[str], commit: bool = True):
     current_tasks = [e['content'] for e in api.projects.get_data(project_id)['items']]
     for t in tasks:
         if t not in current_tasks:
             _add_task(api, project_id, t, commit=False)
+    if commit:
+        api.commit()
+
+
+def _complete_tasks(api: todoist.TodoistAPI, project_id: int, tasks: List[str], commit: bool = True):
+    current_tasks = [e['content'] for e in api.projects.get_data(project_id)['items']]
+    ts = _tasks_from_strs(api, project_id, current_tasks)
+    for st, t in ts.items():
+        if st in tasks:
+            _complete_task(api, t, commit=False)
     if commit:
         api.commit()
 
@@ -71,13 +99,21 @@ def update_todist_from_file(acc: TodistAccount, file_path: str, project_name: st
                 TypeError('missing paramater api for set_api = False')
         # n1 = time.time()
         project_id = next(filter(lambda x: x['name'] == project_name, api.projects.all()))['id']
+        crossed_tasks = []
+        new_tasks = []
         if os.path.exists(file_path):
             with open(file_path, 'r') as f:
-                tasks = [raw_line.replace('-', '').strip() for raw_line in f.readlines()]
-        else:
-            tasks = []
+                for raw_line in f.readlines():
+                    raw_line = raw_line.strip()
+                    if raw_line.startswith('x'):
+                        crossed_tasks.append(raw_line[1:].strip())
+                    elif raw_line.startswith('-'):
+                        new_tasks.append(raw_line[1:].strip())
+                    else:
+                        print('[WARNING] Invalid TODO. Didn\t get `-` nor `x` at the beginning')
         # n2 = time.time()
-        _add_tasks(api, project_id, tasks)
+        _add_tasks(api, project_id, new_tasks)
+        _complete_tasks(api, project_id, crossed_tasks)
         # n3 = time.time()
         # print(f'Took {n2 - n1} seconds to get project id and tasks and {n3 - n2} seconds to add the tasks')
         return True
@@ -96,13 +132,8 @@ def update_file_from_todoist(acc: TodistAccount, file_path: str, project_name: s
                 TypeError('missing paramater api for set_api = False')
         project_id = next(filter(lambda x: x['name'] == project_name, api.projects.all()))['id']
         tasks = [e['content'] for e in api.projects.get_data(project_id)['items']]
-        if os.path.exists(file_path):
-            with open(file_path, 'r') as f:
-                current_tasks = [raw_line.replace('-', '').strip() for raw_line in f.readlines()]
-        else:
-            current_tasks = []
-        with open(file_path, 'a') as f:
-            f.writelines([f'- {t}\n' for t in tasks if t not in current_tasks])
+        with open(file_path, 'w') as f:
+            f.writelines([f'- {t}\n' for t in tasks])
         return True
     except Exception:
         traceback.print_exc()
