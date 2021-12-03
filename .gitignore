@@ -1,5 +1,7 @@
-TODO.txt
-DOING.txt
+TODO*.txt
+DOING*.txt
+*.out
+main.py
 .idea/
 *.json
 *.cmd
