@@ -5,7 +5,7 @@ from dataclasses import dataclass
 import sys
 from typing import Optional, List, Tuple, Dict
 from enum import auto, Enum
-import todoist
+from todoist.api import TodoistAPI
 import json
 import datetime
 
@@ -13,9 +13,10 @@ import datetime
 FILE_PATH = 'TODO.txt'
 Task = Dict[str, str]
 DAT_FMT = '%Y-%m-%d:%H:%M:%S'
+TaskId = int
 
 
-def _tasks_from_strs(api: todoist.TodoistAPI, project_id: int, tstrs: List[str]) -> Dict[str, Task]:
+def _tasks_from_strs(api: TodoistAPI, project_id: int, tstrs: List[str]) -> Dict[str, Task]:
     tasks = {k: None for k in tstrs}
     for t in api.projects.get_data(project_id)['items']:
         if t['content'] in tasks:
@@ -23,18 +24,22 @@ def _tasks_from_strs(api: todoist.TodoistAPI, project_id: int, tstrs: List[str])
     return tasks
 
 
+def _tasks_from_ids(api: TodoistAPI, tstrs: List[Tuple[str, TaskId]]) -> Dict[str, Task]:
+    return {k: api.items.get_by_id(t_id) for  k, t_id in tstrs}
+
+
 @dataclass
 class TodistAccount:
     token: str
 
 
-def _set_api(acc: TodistAccount) -> todoist.TodoistAPI:
-    api = todoist.TodoistAPI(acc.token)
+def _set_api(acc: TodistAccount) -> TodoistAPI:
+    api = TodoistAPI(acc.token)
     api.sync()
     return api
 
 
-def _add_task(api: todoist.TodoistAPI, project_id: int, task: str, commit: bool = True):
+def _add_task(api: TodoistAPI, project_id: int, task: str, commit: bool = True):
     if task.strip() == '':
         return
     api.items.add(task, project_id=project_id)
@@ -42,27 +47,42 @@ def _add_task(api: todoist.TodoistAPI, project_id: int, task: str, commit: bool 
         api.commit()
 
 
-def _complete_task(api: todoist.TodoistAPI, task: Task, commit: bool = True):
+
+def _modify_task(api: TodoistAPI, t_id: TaskId, task: str, commit: bool = True):
+    if task.strip() == '':
+        return
+    api.items.get_by_id(t_id).update(content=task)
+    if commit:
+        api.commit()
+
+
+def _complete_task(api: TodoistAPI, task: Task, commit: bool = True):
     api.items.complete(task['id'], datetime.datetime.today().strftime('%Y-%m-%d'))
     if commit:
         api.commit()
 
 
-def _add_tasks(api: todoist.TodoistAPI, project_id: int, tasks: List[str], commit: bool = True):
-    current_tasks = [e['content'] for e in api.projects.get_data(project_id)['items']]
-    for t in tasks:
-        if t not in current_tasks:
-            _add_task(api, project_id, t, commit=False)
+def _add_tasks(api: TodoistAPI, project_id: int, tasks: List[Tuple[str, TaskId]], commit: bool = True):
+    for t, t_id in tasks:
+        _add_task(api, project_id, t, commit=False)
     if commit:
         api.commit()
 
 
-def _complete_tasks(api: todoist.TodoistAPI, project_id: int, tasks: List[str], commit: bool = True):
-    current_tasks = [e['content'] for e in api.projects.get_data(project_id)['items']]
-    ts = _tasks_from_strs(api, project_id, current_tasks)
+def _modify_tasks(api: TodoistAPI, tasks: List[Tuple[str, TaskId]], commit: bool = True):
+    for t, t_id in tasks:
+        _modify_task(api, t_id, t, commit=False)
+    if commit:
+        api.commit()
+
+
+def _complete_tasks(api: TodoistAPI, project_id: int, tasks: List[Tuple[str, TaskId]], commit: bool = True):
+    ts = _tasks_from_ids(api, tasks)
+    # ts = _tasks_from_strs(api, project_id, current_tasks)
+    if len(tasks) == 0:
+        return
     for st, t in ts.items():
-        if st in tasks:
-            _complete_task(api, t, commit=False)
+        _complete_task(api, t, commit=False)
     if commit:
         api.commit()
 
@@ -70,7 +90,7 @@ def _complete_tasks(api: todoist.TodoistAPI, project_id: int, tasks: List[str], 
 def load_account_from_json(file_path: str) -> TodistAccount:
     if not os.path.exists(file_path):
         print(f'[ERROR] Couldn\'t find account path `{file_path}`. Try setting it with the `-acc` arg or use `--config`')
-        exit(1)
+        sys.exit(1)
     with open(file_path, 'r') as f:
         data = json.load(f)
         if 'token' not in data:
@@ -89,8 +109,24 @@ def sync_file_with_todoist(acc: TodistAccount, file_path: str, project_name: str
         return False
 
 
+def _parse_cont_id_from_line(line: str) -> Tuple[str, Optional[TaskId]]:
+    r_line = line[::-1]  # reverse the line to strat looking from the traceback
+    id_sub_identifier = '(id#'[::-1]  # reverse the sub string identifier aswell
+    id_end_identifier = ')'[::-1]  # reverse the end identifier aswell
+    end = r_line.find(id_end_identifier)
+    if end < 0:
+        return None
+    start = r_line.find(id_sub_identifier, end)
+    if start < 0:
+        return None
+    val = r_line[end + len(id_end_identifier):start][::-1]  # Don't forget to reverse the output as well
+    if val.isnumeric():
+        return (r_line[:end].strip() + ' ' + r_line[start + len(id_sub_identifier):].strip())[::-1].strip(), int(val)
+    else:
+        raise ValueError(f'Corrupted value of id. Expected initiger-like, found {val}')
+
 def update_todist_from_file(acc: TodistAccount, file_path: str, project_name: str, set_api: bool = True,
-                            api: Optional[todoist.TodoistAPI] = None) -> bool:
+                            api: Optional[TodoistAPI] = None) -> bool:
     try:
         if set_api:
             api = _set_api(acc)
@@ -99,20 +135,35 @@ def update_todist_from_file(acc: TodistAccount, file_path: str, project_name: st
                 TypeError('missing paramater api for set_api = False')
         # n1 = time.time()
         project_id = next(filter(lambda x: x['name'] == project_name, api.projects.all()))['id']
-        crossed_tasks = []
-        new_tasks = []
+        crossed_tasks: List[Tuple[str, TaskId]] = []
+        new_tasks: List[Tuple[str, TaskId]] = []
+        modified_tasks: List[Tuple[str, TaskId]] = []
+        # n2 = time.time()
+        current_tasks = []
+        completed_tasks = {e['task_id'] for e in api.completed.get_all(project_id=project_id)['items']}
+        current_tasks_id = []
+        for e in api.projects.get_data(project_id)['items']:
+            current_tasks.append(e['content'])
+            current_tasks_id.append(e['id'])
         if os.path.exists(file_path):
             with open(file_path, 'r') as f:
                 for raw_line in f.readlines():
                     raw_line = raw_line.strip()
+                    cont = raw_line[1:].strip()
                     if raw_line.startswith('x'):
-                        crossed_tasks.append(raw_line[1:].strip())
+                        crossed_tasks.append(_parse_cont_id_from_line(cont))
                     elif raw_line.startswith('-'):
-                        new_tasks.append(raw_line[1:].strip())
+                        ans = t, t_id = _parse_cont_id_from_line(cont)
+                        if t_id in completed_tasks:
+                            continue
+                        elif t_id is None or t_id not in current_tasks_id:
+                            new_tasks.append(ans)
+                        elif t not in current_tasks:
+                            modified_tasks.append(ans)
                     else:
-                        print('[WARNING] Invalid TODO. Didn\t get `-` nor `x` at the beginning')
-        # n2 = time.time()
+                        print('[WARNING] Invalid TODO. Didn\'t get `-` nor `x` at the beginning')
         _add_tasks(api, project_id, new_tasks)
+        _modify_tasks(api, modified_tasks)
         _complete_tasks(api, project_id, crossed_tasks)
         # n3 = time.time()
         # print(f'Took {n2 - n1} seconds to get project id and tasks and {n3 - n2} seconds to add the tasks')
@@ -123,7 +174,7 @@ def update_todist_from_file(acc: TodistAccount, file_path: str, project_name: st
 
 
 def update_file_from_todoist(acc: TodistAccount, file_path: str, project_name: str, set_api: bool = True,
-                             api: Optional[todoist.TodoistAPI] = None) -> bool:
+                             api: Optional[TodoistAPI] = None) -> bool:
     try:
         if set_api:
             api = _set_api(acc)
@@ -131,9 +182,9 @@ def update_file_from_todoist(acc: TodistAccount, file_path: str, project_name: s
             if api is None:
                 TypeError('missing paramater api for set_api = False')
         project_id = next(filter(lambda x: x['name'] == project_name, api.projects.all()))['id']
-        tasks = [e['content'] for e in api.projects.get_data(project_id)['items']]
+        tasks = [(e['content'], e['id']) for e in api.projects.get_data(project_id)['items']]
         with open(file_path, 'w') as f:
-            f.writelines([f'- {t}\n' for t in tasks])
+            f.writelines([f'- {t} (id#{t_id})\n' for t, t_id in tasks])
         return True
     except Exception:
         traceback.print_exc()
@@ -156,14 +207,14 @@ def load_config_from_json(file_path: str) -> Tuple[TodistAccount, str, OpType, s
         for k in ('account_token', 'project', 'action', 'file_path'):
             if k not in data:
                 print(f'[ERROR] Missing key `{k}` in config file `{file_path}`')
-                exit(1)
+                sys.exit(1)
         return TodistAccount(data['account_token']), data['file_path'], OP_NAMES[data['action']], data['project']
 
 
 def load_config_from_args(args: List[str]) -> Tuple[TodistAccount, str, OpType, str]:
     if len(args) == 0:
         print(USAGE)
-        exit(1)
+        sys.exit(1)
     file_path: str = FILE_PATH
     account_path: str = 'accounts.tobedone.json'
     project_name: str = 'Inbox'
@@ -180,7 +231,7 @@ def load_config_from_args(args: List[str]) -> Tuple[TodistAccount, str, OpType, 
             else:
                 print('Invalid usage for push command')
                 print(USAGE)
-                exit(1)
+                sys.exit(1)
         elif arg == 'pull':
             if len(args) == 0:
                 action = OpType.PULL
@@ -191,7 +242,7 @@ def load_config_from_args(args: List[str]) -> Tuple[TodistAccount, str, OpType, 
             else:
                 print('Invalid usage for pull command')
                 print(USAGE)
-                exit(1)
+                sys.exit(1)
         elif arg == 'sync':
             if len(args) == 0:
                 action = OpType.SYNC
@@ -202,24 +253,24 @@ def load_config_from_args(args: List[str]) -> Tuple[TodistAccount, str, OpType, 
             else:
                 print('Invalid usage for sync command')
                 print(USAGE)
-                exit(1)
+                sys.exit(1)
         elif arg == '-acc':
             if len(args) > 0 and not args[-1].startswith('-'):
                 account_path = args.pop()
             else:
                 print('Invalid usage for `-acc` subcommand')
                 print(USAGE)
-                exit(1)
+                sys.exit(1)
         elif arg == '-p':
             if len(args) > 0 and not args[-1].startswith('-'):
                 project_name = args.pop()
             else:
                 print('Invalid usage for `-p` subcommand')
                 print(USAGE)
-                exit(1)
+                sys.exit(1)
         else:
             print(f'Unknwon command {arg}')
-            exit(1)
+            sys.exit(1)
     # print(f'[INFO] Loading account from file: `{account_path}`')
     acc = load_account_from_json(account_path)
     assert action is not None
@@ -254,7 +305,7 @@ if __name__ == '__main__':
             else:
                 print(f'[ERROR] Couldn\'t find filepath `{config_path}` for config')
                 print(USAGE)
-                exit(1)
+                sys.exit(1)
     if config:
         print(f'[INFO] Loading config from file: `{config_path}`')
         account, path, op, p_name = load_config_from_json(config_path)

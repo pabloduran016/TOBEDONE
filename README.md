@@ -1,3 +1,4 @@
+
 # TOBEDONE
 Todoist sync aplication with python. Application to update data from todist and upload datat to todist using a txt
 
@@ -15,9 +16,13 @@ account the amount of spaces surrounding `-` so that example will be the same as
 Completed tasks are defined in the text file starting with `x`. Example: `x Add enemies to my game`. The same rule as 
 before is applied to the completed tasks.  
 
+### Edited tasks
+You can edit a task by changing its content provided that you don't modify the id at the end of the task.
+The textfile has priority in the editing of tasks btw    
+
 ## Getting started
 First, clone the repo or download it however you prefer. In reality, the only files you need are 
-[main.py](main.py) and [requirements.txt](requirements.txt)  
+[tobedone.py](tobedone.py) and [requirements.txt](requirements.txt)  
 After that, install all the libraries using pip:  
 ```bash
 pip install -r requirements.txt
@@ -40,11 +45,11 @@ specify a custom file using the `-acc` flag.
 For the `config.tobedone.json` file to be used, you have to add the `--config` flag which looks for
 `config.tobedone.json` in the current directory. You can add an argument to specify a path.  
 You can get your API token in the Todoist app in Settings -> Integrations.  
-When ever you want to perform an action, just give command to the [main.py](main.py) program.  
+When ever you want to perform an action, just give command to the [tobedone.py](tobedone.py) program.  
 
 ## Usage:
 ```bash
-  USAGE: python main.py [OPTINAL FLAGS] <COMMAND> [ARGS] 
+  USAGE: python tobedone.py [OPTINAL FLAGS] <COMMAND> [ARGS] 
     OPTIONAL FLAGS:
       --config <file>: Use file named config.tobedone.json or `file` if provided to carry out execution
     COMMAND:
