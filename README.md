@@ -18,7 +18,10 @@ before is applied to the completed tasks.
 
 ### Edited tasks
 You can edit a task by changing its content provided that you don't modify the id at the end of the task.
-The textfile has priority in the editing of tasks btw    
+The textfile has priority in the editing of tasks btw  
+
+## Sections  
+A section is defined by the first colon `:` you can escape a colon by surrounding it by quotes or using `\`
 
 ## Getting started
 First, clone the repo or download it however you prefer. In reality, the only files you need are 

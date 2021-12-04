@@ -39,10 +39,10 @@ def _set_api(acc: TodistAccount) -> TodoistAPI:
     return api
 
 
-def _add_task(api: TodoistAPI, project_id: int, task: str, commit: bool = True):
+def _add_task(api: TodoistAPI, project_id: int, task: str, sec_id: Optional[int], commit: bool = True):
     if task.strip() == '':
         return
-    api.items.add(task, project_id=project_id)
+    api.items.add(task, project_id=project_id, section_id=sec_id)
     if commit:
         api.commit()
 
@@ -62,9 +62,13 @@ def _complete_task(api: TodoistAPI, task: Task, commit: bool = True):
         api.commit()
 
 
-def _add_tasks(api: TodoistAPI, project_id: int, tasks: List[Tuple[str, TaskId]], commit: bool = True):
-    for t, t_id in tasks:
-        _add_task(api, project_id, t, commit=False)
+def _add_tasks(api: TodoistAPI, project_id: int, tasks: List[Tuple[str, TaskId, Optional[str]]], commit: bool = True):
+    for t, t_id, cat in tasks:
+        if cat is not None:
+            s = api.sections.add(cat, project_id=project_id)
+            _add_task(api, project_id, t, s['id'], commit=False)
+        else:
+            _add_task(api, project_id, t, None, commit=False)
     if commit:
         api.commit()
 
@@ -108,20 +112,53 @@ def sync_file_with_todoist(acc: TodistAccount, file_path: str, project_name: str
         traceback.print_exc()
         return False
 
+OPENING_QUOTES = '\'"`'
+CLOSING_QUOTES = '\'"`'
+BACK_SLAH = '\\'
 
-def _parse_cont_id_from_line(line: str) -> Tuple[str, Optional[TaskId]]:
+
+def _find_cat(line: str) -> Tuple[str, str]:  # line, cat
+    """Find a category. takes quotes into account"""
+    c = [line]
+    quoting = []  # stack
+    for i, char in enumerate(line):
+        if char in OPENING_QUOTES:
+            quoting.append(char)
+            continue
+        if char in CLOSING_QUOTES:
+            if len(quoting) > 0 and quoting[-1] == char:
+                quoting.pop()
+            else:
+                quoting.append(char)
+            continue
+        if i != 0 and char == ':' and line[i - 1] and len(quoting) == 0 and line[i - 1] != BACK_SLAH:
+            c = [line[:i], line[i + 1:]]
+            break
+    if len(c) > 1:
+        cat = c[0].strip()
+        line = ''.join(c[1:]).strip()
+    else:
+        cat = None
+    return line, cat
+
+def _parse_cont_id_from_line(line: str) -> Tuple[str, Optional[TaskId], Optional[str]]:
     r_line = line[::-1]  # reverse the line to strat looking from the traceback
     id_sub_identifier = '(id#'[::-1]  # reverse the sub string identifier aswell
     id_end_identifier = ')'[::-1]  # reverse the end identifier aswell
     end = r_line.find(id_end_identifier)
     if end < 0:
-        return None
+        line, cat = _find_cat(line)
+        return line, None, cat
     start = r_line.find(id_sub_identifier, end)
     if start < 0:
-        return None
+        line, cat = _find_cat(line)
+        return line, None, cat
     val = r_line[end + len(id_end_identifier):start][::-1]  # Don't forget to reverse the output as well
     if val.isnumeric():
-        return (r_line[:end].strip() + ' ' + r_line[start + len(id_sub_identifier):].strip())[::-1].strip(), int(val)
+        cont = (r_line[:end].strip() + ' ' + r_line[start + len(id_sub_identifier):].strip())[::-1].strip()
+        # Try finding a category:
+        cont, cat = _find_cat(cont)
+        return cont, int(val), cat
     else:
         raise ValueError(f'Corrupted value of id. Expected initiger-like, found {val}')
 
@@ -136,14 +173,14 @@ def update_todist_from_file(acc: TodistAccount, file_path: str, project_name: st
         # n1 = time.time()
         project_id = next(filter(lambda x: x['name'] == project_name, api.projects.all()))['id']
         crossed_tasks: List[Tuple[str, TaskId]] = []
-        new_tasks: List[Tuple[str, TaskId]] = []
+        new_tasks: List[Tuple[str, TaskId, Optional[str]]] = []
         modified_tasks: List[Tuple[str, TaskId]] = []
         # n2 = time.time()
-        current_tasks = []
+        current_tasks_cont = []
         completed_tasks = {e['task_id'] for e in api.completed.get_all(project_id=project_id)['items']}
         current_tasks_id = []
         for e in api.projects.get_data(project_id)['items']:
-            current_tasks.append(e['content'])
+            current_tasks_cont.append(e['content'])
             current_tasks_id.append(e['id'])
         if os.path.exists(file_path):
             with open(file_path, 'r') as f:
@@ -151,15 +188,15 @@ def update_todist_from_file(acc: TodistAccount, file_path: str, project_name: st
                     raw_line = raw_line.strip()
                     cont = raw_line[1:].strip()
                     if raw_line.startswith('x'):
-                        crossed_tasks.append(_parse_cont_id_from_line(cont))
+                        crossed_tasks.append(_parse_cont_id_from_line(cont)[:2])
                     elif raw_line.startswith('-'):
-                        ans = t, t_id = _parse_cont_id_from_line(cont)
+                        ans = t, t_id, cat = _parse_cont_id_from_line(cont)
                         if t_id in completed_tasks:
                             continue
                         elif t_id is None or t_id not in current_tasks_id:
                             new_tasks.append(ans)
-                        elif t not in current_tasks:
-                            modified_tasks.append(ans)
+                        elif t not in current_tasks_cont:
+                            modified_tasks.append(ans[:2])
                     else:
                         print('[WARNING] Invalid TODO. Didn\'t get `-` nor `x` at the beginning')
         _add_tasks(api, project_id, new_tasks)
@@ -184,7 +221,16 @@ def update_file_from_todoist(acc: TodistAccount, file_path: str, project_name: s
         project_id = next(filter(lambda x: x['name'] == project_name, api.projects.all()))['id']
         tasks = [(e['content'], e['id']) for e in api.projects.get_data(project_id)['items']]
         with open(file_path, 'w') as f:
-            f.writelines([f'- {t} (id#{t_id})\n' for t, t_id in tasks])
+            lines = []
+            for t, t_id in tasks:
+                s_id = api.items.get_by_id(t_id)['section_id']
+                if s_id is not None:
+                    s = api.sections.get_by_id(s_id)['name'] + ': '
+                else:
+                    s = ''
+                lines.append(f'- {s}{t} (id#{t_id})\n')
+            f.writelines(lines)
+            # f.writelines([f'- {s}{t} (id#{t_id})\n' for (t, t_id), s in zip(tasks, secs)])
         return True
     except Exception:
         traceback.print_exc()
