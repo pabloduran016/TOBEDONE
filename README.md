@@ -1,8 +1,10 @@
 
 # TOBEDONE
-Todoist sync aplication with python. Application to update data from todist and upload datat to todist using a txt
+Have you ever wanted to sync up TODOs from your mobile phone to any device you want?
+Tobedone is a python app that allows you to sync up any text file with your todoist account.  
+The only thing you need to do is install the todist account and set up a config file in any other device.
 
-You can create a .txt file and sync it with the TOdoist app. Any changes you make on the app will affect the .txt 
+You can create a .txt file and sync it with the Todoist app. Any changes you make on the app will affect the .txt 
 the oder way around. Currently, the actions supporte are:  
 * Push: Change the Todist app according to the text file
 * Pull: Fetch the current changes from Todoist 
