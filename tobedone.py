@@ -64,7 +64,7 @@ def _complete_task(api: TodoistAPI, task: Task, commit: bool = True):
 
 
 def _get_section(api: TodoistAPI, cat: str, project_id: int) -> Section:
-    secs = api.sections.all(lambda e: ['project_id'] == project_id)
+    secs = api.sections.all(lambda e: e['project_id'] == project_id)
     for sec in secs:
         if sec['name'] == cat:
             s = sec
