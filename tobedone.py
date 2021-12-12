@@ -64,7 +64,7 @@ def _complete_task(api: TodoistAPI, task: Task, commit: bool = True):
 
 
 def _get_section(api: TodoistAPI, cat: str, project_id: int) -> Section:
-    secs = api.sections.all(lambda e: e['project_id'] == project_id)
+    secs = api.sections.all(lambda e: ['project_id'] == project_id)
     for sec in secs:
         if sec['name'] == cat:
             s = sec
@@ -227,18 +227,16 @@ def update_file_from_todoist(acc: TodistAccount, file_path: str, project_name: s
             if api is None:
                 TypeError('missing paramater api for set_api = False')
         project_id = next(filter(lambda x: x['name'] == project_name, api.projects.all()))['id']
-        tasks = [(e['content'], e['id']) for e in api.projects.get_data(project_id)['items']]
+        tasks = [(e['content'], e['id'], e['section_id']) for e in api.projects.get_data(project_id)['items']]
         with open(file_path, 'w') as f:
-            lines = []
-            for t, t_id in tasks:
-                s_id = api.items.get_by_id(t_id)['section_id']
+            lines = {k: [] for k in set([e[2] for e in tasks])}
+            for t, t_id, s_id in tasks:
                 if s_id is not None:
                     s = api.sections.get_by_id(s_id)['name'] + ': '
                 else:
                     s = ''
-                lines.append(f'- {s}{t} (id#{t_id})\n')
-            f.writelines(lines)
-            # f.writelines([f'- {s}{t} (id#{t_id})\n' for (t, t_id), s in zip(tasks, secs)])
+                lines[s_id].append(f'- {s}{t} (id#{t_id})\n')
+            f.writelines([x for a in lines.values() for x in a])  # flatten out the dict
         return True
     except Exception:
         traceback.print_exc()
