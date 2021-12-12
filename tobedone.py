@@ -6,6 +6,7 @@ import sys
 from typing import Optional, List, Tuple, Dict
 from enum import auto, Enum
 from todoist.api import TodoistAPI
+from todoist.models import Section
 import json
 import datetime
 
@@ -62,10 +63,21 @@ def _complete_task(api: TodoistAPI, task: Task, commit: bool = True):
         api.commit()
 
 
+def _get_section(api: TodoistAPI, cat: str, project_id: int) -> Section:
+    secs = api.sections.all(lambda e: e['project_id'] == project_id)
+    for sec in secs:
+        if sec['name'] == cat:
+            s = sec
+            break
+    else:
+        s = api.sections.add(cat, project_id=project_id)
+    return s
+
+
 def _add_tasks(api: TodoistAPI, project_id: int, tasks: List[Tuple[str, TaskId, Optional[str]]], commit: bool = True):
     for t, t_id, cat in tasks:
         if cat is not None:
-            s = api.sections.add(cat, project_id=project_id)
+            s = _get_section(api, cat, project_id)
             _add_task(api, project_id, t, s['id'], commit=False)
         else:
             _add_task(api, project_id, t, None, commit=False)
@@ -112,7 +124,6 @@ def sync_file_with_todoist(acc: TodistAccount, file_path: str, project_name: str
         traceback.print_exc()
         return False
 
-OPENING_QUOTES = '\'"`'
 CLOSING_QUOTES = '\'"`'
 BACK_SLAH = '\\'
 
@@ -120,18 +131,15 @@ BACK_SLAH = '\\'
 def _find_cat(line: str) -> Tuple[str, str]:  # line, cat
     """Find a category. takes quotes into account"""
     c = [line]
-    quoting = []  # stack
+    quoting = None
     for i, char in enumerate(line):
-        if char in OPENING_QUOTES:
-            quoting.append(char)
-            continue
         if char in CLOSING_QUOTES:
-            if len(quoting) > 0 and quoting[-1] == char:
-                quoting.pop()
-            else:
-                quoting.append(char)
+            if char == quoting:
+                quoting = None
+            elif char is None:
+                quoting = char
             continue
-        if i != 0 and char == ':' and line[i - 1] and len(quoting) == 0 and line[i - 1] != BACK_SLAH:
+        if i != 0 and char == ':' and line[i - 1] and quoting is None and line[i - 1] != BACK_SLAH:
             c = [line[:i], line[i + 1:]]
             break
     if len(c) > 1:
