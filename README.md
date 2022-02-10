@@ -1,14 +1,26 @@
 
 # TOBEDONE
-Have you ever wanted to sync up TODOs from your mobile phone to any device you want?
+Have you ever wanted to sync up TODOs from your mobile phone to any device you want?  
+
 Tobedone is a python app that allows you to sync up any text file with your todoist account.  
+
 The only thing you need to do is install the todist account and set up a config file in any other device.
 
-You can create a .txt file and sync it with the Todoist app. Any changes you make on the app will affect the .txt 
-the oder way around. Currently, the actions supporte are:  
-* Push: Change the Todist app according to the text file
-* Pull: Fetch the current changes from Todoist 
-* Sync: Make all the tasks from either places appear in both and eliminate [crossed out tasks](#completed-tasks)  
+You can create a `.txt` file and sync it with the Todoist app. Any changes you make on the app will affect the `.txt`
+
+## Operations
+
+ | Operation | Description                                                                                              | 
+ |-----------|----------------------------------------------------------------------------------------------------------|  
+ | **push**  | Change the Todist app according to the text file                                                         |  
+ | **pull**  | Fetch the current changes from Todoist                                                                   |  
+ | **sync**  | Make all the tasks from either places appear in both and eliminate [crossed out tasks](#completed-tasks) |     
+
+## Features
+- [x] TODO creation with sections, descritptions and crossed tasks
+- [ ] Fixmee inspired priority mechanism
+- [ ] Snitch inspired TODO finding in project files
+
 
 ## Tasks
 Taks are defined in the text file starting with `-`. Example: `- Add enemies to my game`. TOBEDONE doesn't take into 
@@ -125,3 +137,5 @@ and add the line
 - [Todist API Docs](https://developer.todoist.com/sync/v8/#get-all-projects)  
 - [Todoist API Module Docs](https://todoist-python.readthedocs.io/en/latest/)  
 - [Todoist GitHub Repo](https://github.com/doist/todoist-python)  
+- [Fixmee](https://github.com/rolandwalker/fixmee): inspired the priority mechanism  
+- [Snitch](https://github.com/tsoding/snitch): inspired the find `TODO` in files mechanism
