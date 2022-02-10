@@ -10,24 +10,33 @@ You can create a `.txt` file and sync it with the Todoist app. Any changes you m
 
 ## Operations
 
- | Operation | Description                                                                                              | 
- |-----------|----------------------------------------------------------------------------------------------------------|  
- | **push**  | Change the Todist app according to the text file                                                         |  
- | **pull**  | Fetch the current changes from Todoist                                                                   |  
- | **sync**  | Make all the tasks from either places appear in both and eliminate [crossed out tasks](#completed-tasks) |     
-
+| Operation | Description                                                                                            |
+|-----------|--------------------------------------------------------------------------------------------------------|
+| **push**  | Change the Todist app according to the text file                                                       |
+| **pull**  | Fetch the current changes from Todoist                                                                 |
+| **sync**  | Make all the todos from either places appear in both and eliminate [completed TODOs](#completed-todos) |
 ## Features
-- [x] TODO creation with sections, descritptions and crossed tasks
+- [x] TODO creation with sections, descritptions and crossed todos
 - [ ] Fixmee inspired priority mechanism
 - [ ] Snitch inspired TODO finding in project files
 
 
-## Tasks
-Taks are defined in the text file starting with `-`. Example: `- Add enemies to my game`. TOBEDONE doesn't take into 
+## TODOs
+Todos are defined in the text file starting with `-`. Example: `- Add enemies to my game`. TOBEDONE doesn't take into 
 account the amount of spaces surrounding `-` so that example will be the same as saying: `   -  Add enemies to my game`.  
 
+### Priority
+The priority of a todo can go from 1 (not important) to 4 (super important). You define the priority of a TODO by the amount
+of `-` before the TODO's title. Example: `- Add enemies to my game` has priority 1 and `--- Increase the amount of FPS (rn is 10)`
+has priority 3.  
+As always the `.txt` file has priority.
+
+Todos are also ordered by priorities in the file 
+
+### Descriptions
+
 Descriptions can be added really easiliy. You can just start a new line below your TODO and whatever you type after the 
-TODO that doesn't start with `-` or `x` will be part of this description. Remember that in `sync` mode teh .txt file has
+TODO that doesn't start with `-` or `x` will be part of this description. Remember that in `sync` mode teh `.txt` file has
 priority.  
 Example: 
 ```
@@ -35,13 +44,13 @@ Example:
   I was thinking maybe something like octuposes that are really big and eat people    <- <description>
 ```
 
-### Completed tasks
-Completed tasks are defined in the text file starting with `x`. Example: `x Add enemies to my game`. The same rule as 
-before is applied to the completed tasks.  
+### Completed TODOs
+Completed todos are defined in the text file starting with `x`. Example: `x Add enemies to my game`. The same rule as 
+before is applied to the completed todos.  
 
-### Edited tasks
-You can edit a task by changing its content provided that you don't modify the id at the end of the task.
-The textfile has priority in the editing of tasks btw  
+### Edited todos
+You can edit a todo by changing its content provided that you don't modify the id at the end of the todo.
+The textfile has priority in the editing of todos btw  
 
 ## Sections  
 A section is defined by the first colon `:` you can escape a colon by surrounding it by quotes or using `\`
@@ -107,7 +116,7 @@ Tu run it just type:
 ```console
 PATH_TO_FILE.cmd
 ```  
-You can even set it as a programmed task using windows tasks programmer or even make a desktop shortcut.  
+You can even set it as a programmed todo using windows todos programmer or even make a desktop shortcut.  
 
 ### Linux
 To make an executable in linux you have to create a .sh file and write.  

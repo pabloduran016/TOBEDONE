@@ -27,7 +27,9 @@ class TODO:
     content: str
     id: Optional[TaskId]
     cat: Optional[str] = None
+    cat_id: Optional[SectionId] = None
     description: str = ''
+    priority: int = 0
 
 
 def _tasks_from_strs(api: TodoistAPI, project_id: int, tstrs: List[str]) -> Dict[str, Task]:
@@ -57,7 +59,8 @@ def _add_task(api: TodoistAPI, project_id: int, todo: TODO, sec_id: Optional[int
     if todo.content.strip() == '':
         return
     print(f'[DEBUG] Adding TODO: {todo}')
-    api.items.add(todo.content, description=todo.description, project_id=project_id, section_id=sec_id)
+    api.items.add(todo.content, description=todo.description, priority=todo.priority,
+                  project_id=project_id, section_id=sec_id)
     if commit:
         api.commit()
 
@@ -66,7 +69,8 @@ def _modify_task(api: TodoistAPI, todo: TODO, commit: bool = True):
     if todo.content.strip() == '':
         return
     print(f'[DEBUG] Modifying TODO: {todo}')
-    api.items.get_by_id(todo.id).update(content=todo.content, description=todo.description)
+    api.items.get_by_id(todo.id).update(content=todo.content, description=todo.description,
+                                        priority=todo.priority)
     if commit:
         api.commit()
 
@@ -209,13 +213,18 @@ def update_todist_from_file(acc: TodistAccount, file_path: str, project_name: st
                 current_todo: Optional[TODO] = None
                 while li < len(lines):
                     raw_line = lines[li].strip()
-                    cont = raw_line[1:].strip()
                     if raw_line.startswith('x'):
+                        cont = raw_line[1:].strip()
                         todo = _parse_cont_id_from_line(cont)
                         current_todo = todo
                         crossed_tasks.append(todo)
                     elif raw_line.startswith('-'):
-                        todo = _parse_cont_id_from_line(cont)
+                        cont = lines[li].strip()
+                        priority = 0
+                        while priority < len(cont) and cont[priority] == '-': priority += 1
+                        assert 1 <= priority, f'Priority must be at least 1: got {priority}'
+                        todo = _parse_cont_id_from_line(cont[priority:])
+                        todo.priority = min(priority, 4)
                         todos.append(todo)
                         current_todo = todo
                     else:
@@ -244,6 +253,9 @@ def update_todist_from_file(acc: TodistAccount, file_path: str, project_name: st
                 modified_tasks.append(todo)
             elif todo.description not in [t.description for t in current_tasks]:
                 modified_tasks.append(todo)
+            elif todo.priority != api.items.get_by_id(todo.id)['priority']:
+                modified_tasks.append(todo)
+
 
         _add_tasks(api, project_id, new_tasks)
         _modify_tasks(api, modified_tasks)
@@ -265,16 +277,23 @@ def update_file_from_todoist(acc: TodistAccount, file_path: str, project_name: s
             if api is None:
                 TypeError('missing paramater api for set_api = False')
         project_id = next(filter(lambda x: x['name'] == project_name, api.projects.all()))['id']
-        tasks = [(e['content'], e['id'], e['section_id'], e['description']) for e in api.projects.get_data(project_id)['items']]
+        tasks = [TODO(e['content'], e['id'], cat_id=e['section_id'], description=e['description'], priority=e['priority'])
+                      for e in api.projects.get_data(project_id)['items']]
         with open(file_path, 'w') as f:
-            lines: Dict[SectionId, List[str]] = {k: [] for k in set([e[2] for e in tasks])}
-            for t, t_id, s_id, t_desc in tasks:
-                if s_id is not None:
-                    s = api.sections.get_by_id(s_id)['name'] + ': '
+            lines: Dict[SectionId, Dict[int, List[str]]] = {}
+            for todo in tasks:
+                if todo.cat_id is not None:
+                    s = api.sections.get_by_id(todo.cat_id)['name'] + ': '
                 else:
                     s = ''
-                lines[s_id].append(f'- {s}{t} (id#{t_id})\n{t_desc}{NEW_LINE if t_desc != "" else ""}')
-            f.writelines([x for a in lines.values() for x in a])  # flatten out the dict
+
+                if todo.cat_id not in lines:
+                    lines[todo.cat_id] = {}
+                if todo.priority not in lines[todo.cat_id]:
+                    lines[todo.cat_id][todo.priority] = []
+                lines[todo.cat_id][todo.priority].append((f'{"".join("-" for _ in range(todo.priority))} {s}{todo.content} (id#{todo.id})\n{todo.description}'
+                                                          f'{NEW_LINE if todo.description != "" else ""}'))
+            f.writelines([line for section in lines.values() for prior in reversed(sorted(section.keys())) for line in section[prior]])  # flatten out the dict
         return True
     except Exception:
         traceback.print_exc()
