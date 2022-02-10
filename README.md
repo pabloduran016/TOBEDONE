@@ -17,7 +17,7 @@ You can create a `.txt` file and sync it with the Todoist app. Any changes you m
 | **sync**  | Make all the todos from either places appear in both and eliminate [completed TODOs](#completed-todos) |
 ## Features
 - [x] TODO creation with sections, descritptions and crossed todos
-- [ ] Fixmee inspired priority mechanism
+- [x] Fixmee inspired priority mechanism
 - [ ] Snitch inspired TODO finding in project files
 
 
