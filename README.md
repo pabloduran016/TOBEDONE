@@ -14,6 +14,15 @@ the oder way around. Currently, the actions supporte are:
 Taks are defined in the text file starting with `-`. Example: `- Add enemies to my game`. TOBEDONE doesn't take into 
 account the amount of spaces surrounding `-` so that example will be the same as saying: `   -  Add enemies to my game`.  
 
+Descriptions can be added really easiliy. You can just start a new line below your TODO and whatever you type after the 
+TODO that doesn't start with `-` or `x` will be part of this description. Remember that in `sync` mode teh .txt file has
+priority.  
+Example: 
+```
+- Add enemies to my game                                                              <- <title>
+  I was thinking maybe something like octuposes that are really big and eat people    <- <description>
+```
+
 ### Completed tasks
 Completed tasks are defined in the text file starting with `x`. Example: `x Add enemies to my game`. The same rule as 
 before is applied to the completed tasks.  
